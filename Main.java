@@ -14,7 +14,26 @@ public class Main {
             keyValueMap.compute(key, (k, v) -> (v == null) ? new ArrayList<>() : v).add(value);
 
 
+
         }
+    }
+
+    /**
+     * method which calculates average value for each key
+     * @param values
+     * @return
+     */
+    private static double computeAverage(List<Integer> values) {
+        if (values == null || values.isEmpty()) {
+            return 0.0;
+        }
+
+        int sum = 0;
+        for (int value : values) {
+            sum += value;
+        }
+
+        return (double) sum / values.size();
     }
 
 }
