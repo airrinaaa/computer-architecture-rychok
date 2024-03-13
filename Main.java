@@ -9,14 +9,34 @@ public class Main {
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
             if (line.isEmpty()) {
-                break; // Якщо введено порожній рядок - зупиняємо читання
+                break; // Якщо введено порожній рядок, зупиняємо читання
             }
 
             lineCount++; // Збільшуємо лічильник рядків
 
             String[] parts = line.split(" ");
+            if (parts.length != 2) {
+                System.out.println("Некоректний формат рядка: " + line);
+                continue; // Пропускаємо некоректний рядок
+            }
+
             String key = parts[0];
-            int value = Integer.parseInt(parts[1]);
+            if (!isValidIdentifier(key)) {
+                System.out.println("Некоректний ідентифікатор: " + key);
+                continue; // Пропускаємо некоректний ідентифікатор
+            }
+
+            int value;
+            try {
+                value = Integer.parseInt(parts[1]);
+                if (value < -10000 || value > 10000) {
+                    System.out.println("Значення поза діапазоном [-10000, 10000]: " + value);
+                    continue; // Пропускаємо некоректне значення
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Некоректне значення: " + parts[1]);
+                continue; // Пропускаємо некоректне значення
+            }
 
             keyValueMap.compute(key, (k, v) -> (v == null) ? new ArrayList<>() : v).add(value);
         }
@@ -29,6 +49,10 @@ public class Main {
                 System.out.println(key + " " + average);
             }
         }
+    }
+
+    private static boolean isValidIdentifier(String key) {
+        return key.matches("^[^\\s]{1,16}$");
     }
 
     private static double computeAverage(List<Integer> values) {
