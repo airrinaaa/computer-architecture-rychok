@@ -12,6 +12,7 @@ import java.util.*;
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+
         Map<String, List<Double>> keyValueMap = new HashMap<>();
         int lineCount = 0; // Лічильник рядків
 
