@@ -2,75 +2,58 @@
 .stack 100h
 
 .data
-    buffer db 80h dup(?)
+filename    db "test.in", 0
+buffer      db 255 dup (?)  ; Буфер для збереження рядка
 
 .code
-main proc
-    mov ax, @data
-    mov ds, ax
+main:
+    ; Відкриття файлу
+    mov ah, 3Dh       ; Функція для відкриття файлу
+    mov al, 0         ; Режим доступу (0 - читання)
+    lea dx, filename  ; Адреса імені файлу
+    int 21h           ; Виклик системного переривання DOS
 
-    mov ah, 3Fh       
-    mov bx, 0        
-    lea dx, buffer   
-    mov cx, 80h      
-    int 21h         
+    jc error          ; Перевірка на помилку (якщо CF встановлено, сталася помилка)
 
-    cmp ax, cx
-    jae checking_eof    
-    mov cx, ax       
+    mov bx, ax        ; Збереження дескриптора файлу
 
-display:
-    mov ah, 02h      
-    mov si, 0        
+    ; Читання рядка з файлу
+    mov ah, 3Fh       ; Функція для читання з файлу
+    mov cx, 255       ; Максимальна довжина рядка
+    lea dx, buffer    ; Адреса буфера для збереження рядка
+    int 21h           ; Виклик системного переривання DOS
 
-print_loop:
-    mov dl, buffer[si] ; Вставляємо символ для виведення
-    int 21h           ; Виводимо символ
-    inc si            ; Наступний символ
-    loop print_loop   ; Повторюємо, поки CX != 0
+    jc error_read     ; Перевірка на помилку
 
-checking_eof:
-    ; Перевірка на кінець файлу
-    mov ah, 3Eh       ; Функція DOS для перевірки EOF
-    mov bx, 0     
-    int 21h           ;DOS-переривання
+    ; Обробка рядка (за потреби)
+    ; Наприклад, виведення рядка на екран
+    mov ah, 09h       ; Функція для виведення рядка
+    lea dx, buffer    ; Адреса початку рядка
+    int 21h           ; Виклик системного переривання DOS
 
-    ; Якщо вказівник EOF не дорівнює 128 (0x80) - файл закінчився
-    cmp ax, 80h
-    jne ending   ; Якщо EOF, завершуємо програму
+    ; Закриття файлу
+    mov ah, 3Eh       ; Функція для закриття файлу
+    mov bx, bx        ; Передача дескриптора файлу
+    int 21h           ; Виклик системного переривання DOS
 
-    
-    jmp main
+    ; Вихід з програми
+    mov ah, 4Ch       ; Функція для виходу з програми
+    int 21h           ; Виклик системного переривання DOS
 
-calculate_average:
-    ; Обчислення суми та кількості
-    mov cx, 80h
-    lea si, buffer
-sumLoop:
-    mov al, [si]
-    add sum, ax
-    inc count
-    inc si
-    loop sumLoop
+error:
+    ; Обробка помилки відкриття файлу
+    ; Ваш код обробки помилки
 
-    ; Обчислення середнього арифметичного
-    mov ax, sum
-    cwd ; 
-    div count
+    ; Вихід з програми
+    mov ah, 4Ch       ; Функція для виходу з програми
+    int 21h           ; Виклик системного переривання DOS
 
-    ; Виведення середнього арифметичного
-    mov cx, 11
-    lea si, buffer
-outLoop:
-    mov dl, [si]
-    mov ah, 02h
-    int 21h
+error_read:
+    ; Обробка помилки читання з файлу
+    ; Ваш код обробки помилки
 
-    inc si
-    loop outLoop
+    ; Вихід з програми
+    mov ah, 4Ch       ; Функція для виходу з програми
+    int 21h           ; Виклик системного переривання DOS
 
-    ; Завершення програми
-    mov ax, 4c00h
-    int 21h
-main endp
 end main
