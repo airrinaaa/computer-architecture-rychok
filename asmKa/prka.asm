@@ -39,7 +39,8 @@ read_loop:
     add si, numberIndex ; для переходу до наступного елемента масиву
     mov [si],0 
     call convert_to_decimal ; виклик підпрограми для конвертації в число
-   
+    call calculate_sum_and_average ; виклик підпрограми для обчислення середнього арифметичного
+    
  
 ending:
     ; завершення програми
@@ -236,16 +237,7 @@ adding_new_key:
     jnz adding_new_key
     
 key_added:
-    mov cx, newIndex
-    mov existingIndex,cx ; вказує на останній індекс, де знаходиться останній доданий ключ
-    inc newIndex ; збільшення значення newIndex, бо був доданий новий ключ
-
-    mov si, offset amountOfKeys ; вказує на останній індекс у масиві amountOfKeys, де зберігається кількість ключів
-    mov cx, existingIndex
-    shl cx,1 ; cx = cx*2( щоб коректно вказати на необхідний елемент у масиві)
-    add si, cx ; додавання зміщення для отримання адреси місця, де потрібно зберегти кількість ключів
-    mov ax,1 ; додавання кількості ключів, бо був доданий новий ключ
-    mov [si],ax
+    call already_added
     jmp end_checking
 
 key_present:
@@ -266,6 +258,19 @@ end_checking:
     ret
 key_checking endp
 
+already_added proc
+    mov cx, newIndex
+    mov existingIndex,cx ; вказує на останній індекс, де знаходиться останній доданий ключ
+    inc newIndex ; збільшення значення newIndex, бо був доданий новий ключ
+    mov si, offset amountOfKeys ; вказує на останній індекс у масиві amountOfKeys, де зберігається кількість ключів
+    mov cx, existingIndex
+    shl cx,1 ; cx = cx*2( щоб коректно вказати на необхідний елемент у масиві)
+    add si, cx ; додавання зміщення для отримання адреси місця, де потрібно зберегти кількість ключів
+    mov ax,1 ; додавання кількості ключів, бо був доданий новий ключ
+    mov [si],ax
+    ret
+already_added endp
+
 reset_keys_array proc 
 ;підпрограма для очищення масиву ключів(заповнення нулями)
 fill_with_zeros:
@@ -277,4 +282,25 @@ fill_with_zeros:
     jnz fill_with_zeros 
     ret
 reset_keys_array endp
+
+calculate_sum_and_average proc
+    mov cx,0 ; лічильник
+calculate_average:
+    mov si, offset values
+    shl cx,1
+    add si,cx ; перехід до наступного числа
+
+    mov di, offset amountOfKeys
+    add di, cx ; для переходу до відповідної кількості ключів
+    shr cx,1 
+    mov ax, [si] ; завантаження елемента масиву values до ax
+    mov bx, [di] ; завантаження кількості ключа з amountOfKeys до bx
+    mov dx,0
+    div bx ; отримання середнього значення
+    mov [si], ax ; запис середнього арифметичного до масиву values
+    inc cx
+    cmp cx, newIndex 
+    jnz calculate_average
+    ret
+calculate_sum_and_average endp
 end main
