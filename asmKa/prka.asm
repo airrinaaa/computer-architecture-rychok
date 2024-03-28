@@ -39,9 +39,7 @@ read_loop:
     add si, numberIndex ; для переходу до наступного елемента масиву
     mov [si],0 
     call convert_to_decimal ; виклик підпрограми для конвертації в число
-    call calculate_sum_and_average ; виклик підпрограми для обчислення середнього арифметичного
-    call bubble_sort ; виклик підпрограми для сортування елементів масивів
-    call print_loop ; виклик підпрограми для виведення результату - відсортованого масиву
+    
  
 ending:
     ; завершення програми
@@ -103,5 +101,76 @@ stop_reading:
 reading_symbol endp   
 
 
+
+convert_to_decimal proc
+    mov bx, 0 ; для подальшого зерігання значення числа у десятковій системі числення 
+    mov cx,0 ; для відстеження позиції символу у числі
+start_converting:
+    ; мітка, яка відповідає за проходження по кожному символу у числі
+    mov si, offset num
+    add si, numberIndex ; вказує на позицію останнього символу у числі
+    dec si ; для переходу до попереднього символу в числі
+    sub si,cx ; si = si - cx(кількість символів які були оброблені)
+    mov ax, 0
+    mov al, [si]
+    cmp ax, 45 ; перевірка чи символ = мінус     
+    jnz positive_number
+    je stop_converting
+positive_number:        
+    sub al,'0'; віднімання ASCII значення '0' від символу(перетворює символ цифри в цифрове значення) 
+    push cx ; для подальшого відновлення, щоб знати скільки цифр у числі залишилось опрацювати
+    cmp cx,0 ; щоб визначити чи це перша цифра в числі
+    jnz multiplying_by_ten
+    jmp saving_decimal
+
+multiplying_by_ten:
+    mov dx,10
+    mul dx
+    dec cx ; cx = cx - 1 
+    cmp cx, 0
+    je saving_decimal
+    jnz multiplying_by_ten
+
+saving_decimal:    
+    pop cx
+    add bx,ax ; у bx число у десятковій системі числення після множення на
+    
+    inc cx
+    cmp cx, numberIndex
+    jnz start_converting
+
+saving_number_to_values_array:    
+
+    mov si, offset values
+    mov ax, existingIndex ; 
+    shl ax, 1 ; зсув вліво на 1 біт для обчислення реального індексу
+    add si, ax
+    add bx, [si] ;
+    mov [si],bx;save number into array
+    call reset_used_values
+stop_converting:
+    ret
+convert_to_decimal endp
+
+reset_used_values proc
+    mov numberIndex,0 
+    mov cx,0
+    call zero_array
+    ret
+reset_used_values endp
+
+zero_array proc
+fill_array_with_zeros:
+    mov si, offset num
+    add si, cx
+    mov [si],0
+    inc cx
+    cmp cx,9
+    je stop_filling
+    jnz fill_array_with_zeros
+    
+stop_filling:
+    ret
+zero_array endp
 
 end main
