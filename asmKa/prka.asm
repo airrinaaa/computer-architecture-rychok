@@ -6,7 +6,7 @@
     existingIndex dw 0 
     newIndex dw 0 
     keys db 10000*16 dup(0) ; Масив для зберігання ключів (максимум 10000 слів)
-    tempKey db 16 dup(0) 
+    tempKey db 16 dup(0) ; для тимчасового зберігання символів нового ключа
     tempKeyIndex dw 0 
     ; змінна, що відповідає за тип зчитуваного символу(wordOrNumber == 0 - зчитується число, wordOrnumber == 1 - зчитується слово)
     wordOrNumber db 1 
@@ -31,7 +31,7 @@ read_loop:
 
     call reading_symbol ; виклик підпрограми для обробки зчитуваного символа
     pop ax ;відновлення значення регістра ax зі стеку
-    or ax,ax ; перевірка, чи ax == 0
+    test ax,ax ; перевірка, чи ax == 0
     jnz read_loop ; якщо ax != 0, то продовження циклу зчитування
 
     mov si, offset num ; завантаження адреси змінної num в si
@@ -39,7 +39,7 @@ read_loop:
     add si, numberIndex ; для переходу до наступного елемента масиву
     mov [si],0 
     call convert_to_decimal ; виклик підпрограми для конвертації в число
-    
+   
  
 ending:
     ; завершення програми
@@ -53,8 +53,8 @@ reading_symbol proc
     cmp symbol,0Dh ; перевірка,чи є символ симколом нового рядка(CR)  
     jnz notCR
     cmp wordOrNumber,0 ; ;перевірка, чи змінна wordOrNumber == 0(це означає що зчитується число)
-    jne stop_reading
-    je stop_line_and_convert
+    jnz stop_reading
+    jz stop_line_and_convert
    
 notCR:
     ; мітка, що вказу на те що символ не є символом нового рядку(CR)
@@ -62,12 +62,12 @@ notCR:
     jnz notLF
     cmp wordOrNumber,0 ; ;перевірка, чи змінна wordOrNumber == 0(це означає що зчитується число)
     jnz stop_reading
-    je stop_line_and_convert
+    jz stop_line_and_convert
 notLF:
     ; мітка, що вказу на те що символ не є символом нового рядку(LF)
     cmp symbol,20h ; перевірка на пробіл
     jnz not_space 
-    je space
+    jz space
 stop_line_and_convert:
     mov wordOrNumber,1 ; wordOrNumber == 1
     call convert_to_decimal ; виклик підпрограми для конвертування з ASCII в десяткову систему числення
@@ -75,7 +75,7 @@ stop_line_and_convert:
 not_space:
     cmp wordOrNumber, 0 ; wordOrNumber == 0
     jnz iSWord
-    je isNumber
+    jz isNumber
 isNumber:
     mov si, offset num ; завантаження в si адреси початку масиву 
     mov bx, numberIndex
@@ -115,20 +115,20 @@ start_converting:
     mov al, [si]
     cmp ax, 45 ; перевірка чи символ = мінус     
     jnz positive_number
-    je stop_converting
+    jz stop_converting
 positive_number:        
-    sub al,'0'; віднімання ASCII значення '0' від символу(перетворює символ цифри в цифрове значення) 
+    add al,'0'; додавання ASCII значення '0' від символу(перетворює символ цифри в цифрове значення) 
     push cx ; для подальшого відновлення, щоб знати скільки цифр у числі залишилось опрацювати
     cmp cx,0 ; щоб визначити чи це перша цифра в числі
     jnz multiplying_by_ten
-    jmp saving_decimal
+    jz saving_decimal
 
 multiplying_by_ten:
     mov dx,10
-    mul dx
+    mul dx ; dx*ax
     dec cx ; cx = cx - 1 
     cmp cx, 0
-    je saving_decimal
+    jz saving_decimal
     jnz multiplying_by_ten
 
 saving_decimal:    
@@ -138,19 +138,22 @@ saving_decimal:
     inc cx
     cmp cx, numberIndex
     jnz start_converting
+    call saving_number_to_values_array
+    
+stop_converting:
+    ret
+convert_to_decimal endp
 
-saving_number_to_values_array:    
-
+saving_number_to_values_array proc
     mov si, offset values
     mov ax, existingIndex ; 
     shl ax, 1 ; зсув вліво на 1 біт для обчислення реального індексу
     add si, ax
-    add bx, [si] ;
-    mov [si],bx;save number into array
+    add bx, [si] 
+    mov [si],bx 
     call reset_used_values
-stop_converting:
-    ret
-convert_to_decimal endp
+saving_number_to_values_array endp
+
 
 reset_used_values proc
     mov numberIndex,0 
@@ -166,11 +169,112 @@ fill_array_with_zeros:
     mov [si],0
     inc cx
     cmp cx,9
-    je stop_filling
+    jz stop_filling
     jnz fill_array_with_zeros
     
 stop_filling:
     ret
 zero_array endp
 
+key_checking proc
+    ; підпрограма для перевірки ключів
+    mov ax,0
+    mov bx, 0
+    mov cx, 0
+    mov dx,0
+    ; обнулення регістрів
+    cmp newIndex,0 
+    jnz checking_existing_key ; newIndex != 0 перехід до пошуку ключів
+    jz adding_new_key
+key_searching:
+    mov dx,0 ; для зберігання поточної позиції в масиві ключів
+checking_existing_key:
+    mov si, offset keys 
+    shl cx, 4 ; зсув вправо на 4 біти для отримання наступного елемента масиву у пам'яті
+    add si, cx
+    shr cx,4 ; зсув назад на 4 біти
+    add si, dx
+    mov al,[si]; завантаження наступного символу
+    mov di, offset tempKey
+    add di,dx
+    mov ah, [di]
+    cmp al,ah
+    jz keys_equal
+    jnz different_keys
+
+keys_equal:
+    mov bx,1 ; вказує, що символи ключів співпадають
+    jmp continue_checking
+
+different_keys:
+    mov bx,0 ;  вказує, що символи ключів не співпадають
+    mov dx, 15; для переходу до наступного елемента масива
+continue_checking:
+    inc dx
+    cmp dx,16 ; перевірка, чи порівняно уже весь ключ
+    jnz checking_existing_key
+    cmp bx,1 ; чи ключ знайдено
+    jz key_present 
+
+    inc cx ; перехід до наступного ключа
+    cmp cx, newIndex ; перевірка чи оброблено всі ключі
+    jnz key_searching
+    mov cx, 0 
+adding_new_key:
+    mov si, offset tempKey 
+    add si, cx ; для отримання адресу поточного символу для додавання до масиву keys
+    mov di, offset keys 
+    mov ax,  newIndex ; вказування місця нового ключа в масиві keys
+    shl ax,4 
+    add di,cx ; для отримання адреси місця для нового ключа
+    add di, ax ; для отримання кінцевої адреси копіювання символів
+    mov al, [si]
+    mov [di], al 
+    inc cx
+    cmp cx, 16 ; перевірка, чи були додані всі символи ключа
+    jz key_added
+    jnz adding_new_key
+    
+key_added:
+    mov cx, newIndex
+    mov existingIndex,cx ; вказує на останній індекс, де знаходиться останній доданий ключ
+    inc newIndex ; збільшення значення newIndex, бо був доданий новий ключ
+
+    mov si, offset amountOfKeys ; вказує на останній індекс у масиві amountOfKeys, де зберігається кількість ключів
+    mov cx, existingIndex
+    shl cx,1 ; cx = cx*2( щоб коректно вказати на необхідний елемент у масиві)
+    add si, cx ; додавання зміщення для отримання адреси місця, де потрібно зберегти кількість ключів
+    mov ax,1 ; додавання кількості ключів, бо був доданий новий ключ
+    mov [si],ax
+    jmp end_checking
+
+key_present:
+    mov existingIndex,cx
+    mov si, offset amountOfKeys
+    mov cx, existingIndex
+    shl cx,1 ; кожне значення кількості ключів займає 2 байти
+    add si, cx ; для отримання адреси кількості ключів, яку ми хочемо збільшити
+    mov ax, [si]
+    inc ax 
+    mov [si],ax ;збереження нового значення в масиві ключів
+
+end_checking:
+    ; перевірка завершена
+    mov tempKeyIndex,0
+    mov cx,0
+    call reset_keys_array
+    ret
+key_checking endp
+
+reset_keys_array proc 
+;підпрограма для очищення масиву ключів(заповнення нулями)
+fill_with_zeros:
+    mov si, offset tempKey
+    add si, cx
+    mov [si],0
+    inc cx
+    cmp cx,15
+    jnz fill_with_zeros 
+    ret
+reset_keys_array endp
 end main
