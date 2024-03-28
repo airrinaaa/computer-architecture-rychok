@@ -40,7 +40,8 @@ read_loop:
     mov [si],0 
     call convert_to_decimal ; виклик підпрограми для конвертації в число
     call calculate_sum_and_average ; виклик підпрограми для обчислення середнього арифметичного
-    
+    call bubble_sort ; виклик підпрограми для сортування елементів масивів
+    call print_loop ; виклик підпрограми для виведення результату - відсортованого масиву
  
 ending:
     ; завершення програми
@@ -303,4 +304,97 @@ calculate_average:
     jnz calculate_average
     ret
 calculate_sum_and_average endp
+
+bubble_sort proc
+    ; підпрограма, яка виконує сортування бульбашкою
+    pop dx ; відновлюємо кількість чисел зі стеку
+    mov cx,0
+fillIng_amount_of_keys:
+    mov di, offset amountOfKeys
+    shl cx,1
+    add di,cx
+    shr cx,1    
+    mov [di],cx
+    inc cx ; перехід до наступного елементу
+    cmp cx, newIndex ; перевірка, чи пройдено всі елементи
+    jnz fillIng_amount_of_keys
+    mov cx, newIndex 
+    dec cx ; вказує, що останній елемент масиву оброблений
+outerLoop:
+    push cx
+    lea si, amountOfKeys
+innerLoop:
+    mov ax, [si] ; завантаження кількості ключів до ax
+    push ax
+    shl ax,1 
+    add ax, offset values
+    mov di, ax
+    mov ax, [di] ; завантаження числа, що відповідає ключу 
+    mov bx, [si+2] 
+    push bx
+    shl bx,1 
+    add bx, offset values
+    mov di, bx
+    mov bx, [di]
+    cmp ax, bx ; порівняння чисел
+    pop bx
+    pop ax
+    jg nextStep
+    xchg bx, ax
+    mov [si], ax
+    MOV [si+2], bx
+nextStep:
+    add si, 2
+    loop innerLoop
+    pop cx
+    loop outerLoop
+    push dx
+    ret
+bubble_sort endp
+
+print_loop proc
+    mov cx,0
+creating_string:
+    mov ax,0
+    mov existingIndex, 0
+    mov dx,0
+    push cx
+    mov di, offset amountOfKeys
+    shl cx,1
+    add di,cx 
+    mov cx, [di]
+print_key:
+    mov si, offset keys
+    mov ax,0
+    mov ax, cx 
+    shl ax, 4 
+    add si, ax
+    add si, existingIndex
+ 
+    mov ah, 02h
+    mov bx,dx 
+    mov dl, [si]
+    cmp dl, 0 
+    jz enter
+    jnz stay
+stay:
+    int 21h
+    mov dx,bx
+    inc existingIndex
+    inc dx
+    cmp dx, 16
+    jnz print_key
+enter:
+    mov ah, 02h
+    mov dl, 0dh
+    int 21h
+    mov ah, 02h
+    mov dl, 0ah
+    int 21h
+    pop cx
+    inc cx
+    cmp cx, newIndex
+    jnz creating_string
+    ret
+print_loop endp
 end main
