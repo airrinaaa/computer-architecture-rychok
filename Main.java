@@ -12,7 +12,7 @@ import java.util.*;
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-
+        System.out.println("Введіть пару ключ-значення(для завершення - введіть пустий рядок):");
         Map<String, List<Double>> keyValueMap = new HashMap<>();
         int lineCount = 0; // Лічильник рядків
 
@@ -66,9 +66,9 @@ public class Main {
             }
 
             sortAverages(averagesArray, keysArray);
-
+            System.out.println("Відсортований за середніми значеннями масив ключів:");
             for (int i = 0; i < keysArray.length; i++) {
-                System.out.println(keysArray[i] + " " + averagesArray[i]);
+                System.out.println(keysArray[i]);
             }
         }
     }
